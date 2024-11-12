@@ -347,9 +347,9 @@ def run_experiment():
 
     # Instancias seleccionadas manualmente para el experimento
     selected_instances = {
-        'pequeñas': ['burma14']#, 'ulysses16', 'gr17'],
-        # 'medianas': ['eil51', 'berlin52', 'brazil58'],
-        # 'grandes': ['eil101', 'lin105', 'pr107']
+        'pequeñas': ['burma14' 'ulysses16', 'gr17'],
+        'medianas': ['eil51', 'berlin52', 'brazil58'],
+        'grandes': ['eil101', 'lin105', 'pr107']
     }
     
     # Descargar todas las instancias
