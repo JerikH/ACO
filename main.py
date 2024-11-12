@@ -14,7 +14,7 @@ class AntColonyOptimizer:
             
         self.weight_type = weight_type
         if weight_type == 'EXPLICIT':
-            self.distances = instance_data  # Ya tenemos la matriz de distancias
+            self.distances = instance_data # Matriz de distancias
             self.n_cities = len(instance_data)
         else:
             self.cities = instance_data
@@ -28,7 +28,6 @@ class AntColonyOptimizer:
         self.n_iterations = n_iterations
         self.optimal_value = optimal_value
         
-        # El resto de la inicialización se mantiene igual
         self.pheromone = np.ones((self.n_cities, self.n_cities))
         np.fill_diagonal(self.pheromone, 0)
         self.best_path = None
@@ -134,98 +133,197 @@ class AntColonyOptimizer:
         return distances
     
     def run(self):
-        """Ejecuta el algoritmo principal"""
-        start_time = time.time()
+        """
+        Ejecuta el algoritmo principal de Optimización de Colonia de Hormigas (ACO).
+        
+        El algoritmo sigue el siguiente proceso:
+        1. Para cada iteración:
+            - Cada hormiga construye una solución
+            - Se evalúa la calidad de cada solución
+            - Se actualiza la mejor solución global si se encuentra una mejor
+            - Se actualizan los niveles de feromona
+            - Se verifica el criterio de convergencia
+        
+        Criterios de parada:
+        1. Se alcanza el número máximo de iteraciones (self.n_iterations)
+        2. Convergencia: 50 iteraciones consecutivas sin mejora significativa
+        (diferencia < 1e-6 en la mejor distancia)
+        
+        Métricas calculadas:
+        1. GAP = ((mejor_distancia - valor_óptimo) / valor_óptimo) * 100
+        2. Tiempo de ejecución total
+        3. Iteración de convergencia (donde se encontró la mejor solución)
+        
+        Returns:
+            dict: Diccionario con los resultados finales conteniendo:
+                - 'best_distance': Distancia del mejor camino encontrado
+                - 'gap': GAP porcentual respecto al valor óptimo conocido
+                - 'convergence_iteration': Iteración donde se encontró la mejor solución
+                - 'execution_time': Tiempo total de ejecución en segundos
+        """
+        start_time = time.time()  # Iniciar medición de tiempo
         
         for iteration in range(self.n_iterations):
-            paths = []
-            distances = []
+            paths = []      # Lista para almacenar los caminos de todas las hormigas
+            distances = []  # Lista para almacenar las distancias de los caminos
             
-            # Construcción de soluciones por cada hormiga
+            # Fase de construcción: cada hormiga construye su solución
             for ant in range(self.n_ants):
+                # Construir y evaluar el camino de la hormiga actual
                 path = self.construct_solution()
                 path_distance = self.calculate_path_distance(path)
                 paths.append(path)
                 distances.append(path_distance)
                 
-                # Actualizar mejor solución
+                # Actualizar la mejor solución global si se encuentra una mejor
                 if path_distance < self.best_distance:
                     self.best_distance = path_distance
                     self.best_path = path.copy()
                     self.convergence_iteration = iteration
             
-            # Actualizar feromonas
+            # Fase de actualización de feromonas
             self.update_pheromones(paths, distances)
             
-            # Verificar estabilización
+            # Verificar estabilización/convergencia
+            # Se considera que el algoritmo ha convergido si la mejora es menor a 1e-6
+            # durante 50 iteraciones consecutivas
             if abs(self.prev_best - self.best_distance) < 1e-6:
                 self.stabilization_count += 1
             else:
                 self.stabilization_count = 0
             self.prev_best = self.best_distance
             
-            # Detener si hay estabilización
-            if self.stabilization_count >= 50:  # 50 iteraciones sin mejora
+            # Criterio de parada por estabilización
+            if self.stabilization_count >= 50:  # 50 iteraciones sin mejora significativa
                 break
         
+        # Calcular métricas finales
         execution_time = time.time() - start_time
+        
+        # Calcular GAP porcentual respecto al óptimo conocido
+        # GAP = ((mejor_encontrado - óptimo) / óptimo) * 100
         gap = ((self.best_distance - self.optimal_value) / self.optimal_value) * 100
         
+        # Retornar diccionario con todos los resultados
         return {
-            'best_distance': self.best_distance,
-            'gap': gap,
-            'convergence_iteration': self.convergence_iteration,
-            'execution_time': execution_time
+            'best_distance': self.best_distance,   # Mejor distancia encontrada
+            'gap': gap,                           # GAP porcentual respecto al óptimo
+            'convergence_iteration': self.convergence_iteration,  # Iteración de mejor solución
+            'execution_time': execution_time      # Tiempo total de ejecución
         }
     
     def construct_solution(self):
-        """Construye una solución para una hormiga"""
-        unvisited = list(range(1, self.n_cities))
+        """
+        Construye una solución (ruta) para una hormiga del algoritmo ACO.
+        
+        El proceso sigue estos pasos:
+        1. Inicia en la ciudad 0
+        2. Mientras haya ciudades sin visitar:
+            - Calcula probabilidades para las ciudades no visitadas
+            - Selecciona la siguiente ciudad basada en estas probabilidades
+            - Añade la ciudad al camino y la elimina de las no visitadas
+        
+        Returns:
+            list: Lista ordenada de ciudades que representa la ruta construida
+        """
+        unvisited = list(range(1, self.n_cities))  # Todas las ciudades excepto la 0
         path = [0]  # Comenzar desde la ciudad 0
         
         while unvisited:
-            current = path[-1]
+            current = path[-1]  # Última ciudad visitada
             probabilities = self.calculate_probabilities(current, unvisited)
             next_city = np.random.choice(unvisited, p=probabilities)
             path.append(next_city)
             unvisited.remove(next_city)
         
         return path
-    
+
     def calculate_probabilities(self, current, unvisited):
-        """Calcula probabilidades de selección para ciudades no visitadas"""
+        """
+        Calcula las probabilidades de selección para las ciudades no visitadas.
+        
+        La probabilidad de seleccionar la ciudad j después de la ciudad i se calcula como:
+        P(i,j) = (τᵢⱼᵅ * ηᵢⱼᵝ) / Σ(τᵢₖᵅ * ηᵢₖᵝ)
+        
+        donde:
+        - τᵢⱼ es el nivel de feromona entre las ciudades i y j
+        - ηᵢⱼ es la visibilidad (1/distancia) entre las ciudades i y j
+        - α es el peso de la feromona (self.alpha)
+        - β es el peso de la visibilidad (self.beta)
+        - k representa todas las ciudades no visitadas
+        
+        Args:
+            current (int): Índice de la ciudad actual
+            unvisited (list): Lista de índices de ciudades no visitadas
+        
+        Returns:
+            numpy.ndarray: Array de probabilidades normalizadas para cada ciudad no visitada
+        """
         if not unvisited:
             return np.array([])
             
+        # Obtener valores de feromona y distancia para ciudades no visitadas
         pheromone = np.array([self.pheromone[current][j] for j in unvisited])
         distance = np.array([1/max(1e-10, self.distances[current][j]) for j in unvisited])
         
-        # Evitar división por cero
+        # Calcular probabilidades según la fórmula del ACO
         probabilities = (pheromone ** self.alpha) * (distance ** self.beta)
         sum_prob = np.sum(probabilities)
+        
+        # Si todas las probabilidades son 0, usar distribución uniforme
         if sum_prob == 0:
             return np.ones(len(unvisited)) / len(unvisited)
             
         return probabilities / sum_prob
-    
+
     def calculate_path_distance(self, path):
-        """Calcula la distancia total de un camino"""
+        """
+        Calcula la distancia total de un camino completo.
+        
+        La distancia total se calcula como la suma de las distancias entre
+        ciudades consecutivas en el camino, incluyendo el retorno a la ciudad inicial:
+        
+        distancia_total = Σ(d[path[i]][path[i+1]]) + d[path[-1]][path[0]]
+        
+        Args:
+            path (list): Lista ordenada de índices de ciudades que forma la ruta
+        
+        Returns:
+            float: Distancia total del camino
+        """
         total = 0
         for i in range(len(path)):
             total += self.distances[path[i]][path[(i+1) % self.n_cities]]
         return total
-    
+
     def update_pheromones(self, paths, distances):
-        """Actualiza los niveles de feromona"""
-        # Evaporación
+        """
+        Actualiza los niveles de feromona en todas las aristas del grafo.
+        
+        El proceso tiene dos fases:
+        1. Evaporación: τᵢⱼ = (1-ρ)τᵢⱼ
+        2. Depósito: τᵢⱼ += Σ(1/Lₖ)
+        
+        donde:
+        - τᵢⱼ es el nivel de feromona entre las ciudades i y j
+        - ρ es la tasa de evaporación (self.rho)
+        - Lₖ es la longitud del camino k que incluye la arista (i,j)
+        
+        Args:
+            paths (list): Lista de caminos construidos por las hormigas
+            distances (list): Lista de distancias correspondientes a cada camino
+        """
+        # Fase de evaporación: reducir todas las feromonas según la tasa rho
         self.pheromone *= (1 - self.rho)
         
-        # Depósito
+        # Fase de depósito: añadir nuevas feromonas basadas en la calidad de los caminos
         for path, distance in zip(paths, distances):
             for i in range(len(path)):
                 j = path[(i+1) % self.n_cities]
-                self.pheromone[path[i]][j] += 1.0/distance
-                self.pheromone[j][path[i]] += 1.0/distance  # Simétrico
+                deposit = 1.0/distance  # Cantidad de feromona a depositar
+                # Actualizar en ambas direcciones debido a la simetría del problema
+                self.pheromone[path[i]][j] += deposit
+                self.pheromone[j][path[i]] += deposit
 
 def run_experiment():
     """Ejecuta el experimento completo"""
@@ -249,9 +347,9 @@ def run_experiment():
 
     # Instancias seleccionadas manualmente para el experimento
     selected_instances = {
-        'pequeñas': ['burma14', 'ulysses16', 'gr17'],
-        'medianas': ['eil51', 'berlin52', 'brazil58'],
-        'grandes': ['eil101', 'lin105', 'pr107']
+        'pequeñas': ['burma14']#, 'ulysses16', 'gr17'],
+        # 'medianas': ['eil51', 'berlin52', 'brazil58'],
+        # 'grandes': ['eil101', 'lin105', 'pr107']
     }
     
     # Descargar todas las instancias
