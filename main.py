@@ -348,7 +348,7 @@ def run_experiment():
 
     # Instancias seleccionadas manualmente para el experimento
     selected_instances = {
-        'pequeñas': ['burma14'],
+        'pequeñas': ['ulysses16'],
         # 'medianas': ['eil51', 'berlin52', 'brazil58'],
         # #'grandes': ['eil101', 'lin105', 'pr107']
     }
