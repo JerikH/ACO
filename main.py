@@ -209,7 +209,8 @@ class AntColonyOptimizer:
             'best_distance': self.best_distance,   # Mejor distancia encontrada
             'gap': gap,                           # GAP porcentual respecto al óptimo
             'convergence_iteration': self.convergence_iteration,  # Iteración de mejor solución
-            'execution_time': execution_time      # Tiempo total de ejecución
+            'execution_time': execution_time,      # Tiempo total de ejecución
+	    'best_path' : self.best_path
         }
     
     def construct_solution(self):
@@ -347,9 +348,9 @@ def run_experiment():
 
     # Instancias seleccionadas manualmente para el experimento
     selected_instances = {
-        'pequeñas': ['burma14' 'ulysses16', 'gr17'],
-        'medianas': ['eil51', 'berlin52', 'brazil58'],
-        'grandes': ['eil101', 'lin105', 'pr107']
+        'pequeñas': ['burma14'],
+        # 'medianas': ['eil51', 'berlin52', 'brazil58'],
+        # #'grandes': ['eil101', 'lin105', 'pr107']
     }
     
     # Descargar todas las instancias
@@ -423,7 +424,8 @@ def run_experiment():
                         'best_distance': result['best_distance'],
                         'gap': result['gap'],
                         'convergence_iteration': result['convergence_iteration'],
-                        'execution_time': result['execution_time']
+                        'execution_time': result['execution_time'],
+                        'best_path': result['best_path']
                     })
                 except Exception as e:
                     print(f"[red]Error ejecutando ACO para {instance_name}: {str(e)}")
